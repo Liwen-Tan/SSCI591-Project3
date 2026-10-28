@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Exploring Parks in Los Angeles County</title>
+
+    <!-- ArcGIS Maps SDK for JavaScript 5.1: loaded from Esri's CDN. -->
+    <script type="module" src="https://js.arcgis.com/5.1/"></script>
+
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        color: #263b2d;
+        background: #f2f5f2;
+      }
+      header {
+        padding: 21px 5%;
+        background: #245c3e;
+        color: white;
+      }
+      header h1 { margin: 0 0 6px; font-size: clamp(1.35rem, 3vw, 1.9rem); }
+      header p { margin: 0; font-size: 0.9rem; color: #e2efe6; }
+      main { max-width: 1500px; margin: 0 auto; padding: 16px 3%; }
+      .about {
+        background: white;
+        padding: 16px 20px;
+        margin-bottom: 14px;
+        border-radius: 6px;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+      }
+      .about h2 { margin: 0 0 8px; color: #245c3e; font-size: 1.15rem; }
+      .about p { margin: 0; line-height: 1.6; font-size: 0.94rem; }
+      a { color: #176841; }
+      a:hover { text-decoration: underline; }
+      arcgis-map {
+        display: block;
+        width: 100%;
+        height: 72vh;
+        min-height: 430px;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #e7ede6;
+      }
+      @media (max-width: 600px) {
+        header { padding: 17px 5%; }
+        main { padding: 12px; }
+        .about { padding: 14px; }
+        arcgis-map { height: 67vh; min-height: 370px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h1>Exploring Parks in Los Angeles County</h1>
+      <p>SSCI 591 | Web GIS Project 3</p>
+    </header>
+
+    <main>
+      <section class="about" aria-labelledby="about-heading">
+        <h2 id="about-heading">About This Map</h2>
+        <p>
+          This interactive map shows parks and open spaces across Los Angeles County.
+          The park boundaries and related information are loaded from an online
+          <a href="https://services3.arcgis.com/kfmqp6kwSeDnDKNY/ArcGIS/rest/services/LA_greenspace/FeatureServer/0" target="_blank" rel="noopener noreferrer">ArcGIS Feature Service</a>.
+          I modified the original Intro to FeatureLayer sample by changing the basemap,
+          park symbols, and map extent. Users can click on a park to view its name,
+          city, area, type, and agency. I also added Home and Scale Bar components
+          to make the map easier to explore.
+        </p>
+      </section>
+
+      <!-- Map components: Zoom and Legend from the sample;
+           Layer List is placed inside an Expand control to avoid covering popups.
+           Home and Scale Bar were added for this project. -->
+      <arcgis-map basemap="streets-vector" center="-118.25,34.10" zoom="9">
+        <arcgis-zoom slot="top-left"></arcgis-zoom>
+        <arcgis-home slot="top-left"></arcgis-home>
+        <arcgis-expand slot="top-right" expand-tooltip="Show layers" collapse-tooltip="Hide layers">
+          <arcgis-layer-list></arcgis-layer-list>
+        </arcgis-expand>
+        <arcgis-legend slot="bottom-left"></arcgis-legend>
+        <arcgis-scale-bar slot="bottom-right" unit="metric"></arcgis-scale-bar>
+      </arcgis-map>
+    </main>
+
+    <script type="module">
+      // Adapted from Esri's official "Intro to FeatureLayer" sample.
+      const FeatureLayer = await $arcgis.import("@arcgis/core/layers/FeatureLayer.js");
+      const viewElement = document.querySelector("arcgis-map");
+      await viewElement.viewOnReady();
+
+      // LA County parks are polygons, so use a fill symbol instead of the
+      // marker symbols used by the original tree-point sample.
+      const parksRenderer = {
+        type: "simple",
+        symbol: {
+          type: "simple-fill",
+          color: [98, 182, 103, 0.75],
+          outline: { color: [39, 109, 56, 1], width: 0.9 }
+        }
+      };
+
+      // The FeatureLayer requests features from the public ArcGIS REST API
+      // whenever the web map needs them; no local park dataset is required.
+      const parksLayer = new FeatureLayer({
+        url: "https://services3.arcgis.com/kfmqp6kwSeDnDKNY/ArcGIS/rest/services/LA_greenspace/FeatureServer/0",
+        title: "LA County Parks and Open Space",
+        outFields: ["PARK_NAME", "CITY", "GIS_ACRES", "TYPE", "AGNCY_NAME"],
+        renderer: parksRenderer,
+        popupTemplate: {
+          title: "{PARK_NAME}",
+          content: [
+            {
+              type: "fields",
+              fieldInfos: [
+                { fieldName: "CITY", label: "City" },
+                { fieldName: "GIS_ACRES", label: "Area (acres)", format: { digitSeparator: true, places: 2 } },
+                { fieldName: "TYPE", label: "Park Type" },
+                { fieldName: "AGNCY_NAME", label: "Agency" }
+              ]
+            }
+          ]
+        }
+      });
+
+      viewElement.map.add(parksLayer);
+      try {
+        await parksLayer.load();
+        console.log("LA County parks layer loaded from ArcGIS Feature Service.");
+      } catch (error) {
+        console.error("Unable to load the LA County parks service:", error);
+      }
+    </script>
+  </body>
+</html>
